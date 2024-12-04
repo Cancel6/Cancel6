@@ -14,19 +14,19 @@ load_dotenv()
 app = Flask(__name__)
 
 
-# # Configure the PostgreSQL database connection
-# app.config['SESSION_TYPE'] = 'filesystem'
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://les_posgres_user:gYpuFme1C2tPvrpXWusQCvegnOCGIaYv@dpg-ct7r5a23esus73a1762g-a/les_posgres'
-# app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# Configure the PostgreSQL database connection
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://les_posgres_user:gYpuFme1C2tPvrpXWusQCvegnOCGIaYv@dpg-ct7r5a23esus73a1762g-a/les_posgres'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 #postgresql://les_posgres_user:gYpuFme1C2tPvrpXWusQCvegnOCGIaYv@dpg-ct7r5a23esus73a1762g-a.singapore-postgres.render.com/les_posgres
 # # Configure the database connection
 
 
-#LOCAL
-app.config['SESSION_TYPE'] = 'filesystem'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://root:new_password@localhost/ocean_current_app'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# #LOCAL
+# app.config['SESSION_TYPE'] = 'filesystem'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://root:new_password@localhost/ocean_current_app'
+# app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Secret key for session management
 app.secret_key = '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'
