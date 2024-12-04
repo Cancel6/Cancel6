@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <title>Ocean Current Data and Map</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
+            background-color: #e8f0fa;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(to right, #4c4eff, #6b7dff);
+            color: white;
+            padding: 10px 20px;
+            font-size: 1.2rem;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+
+        .header-buttons button, .header-buttons a {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: #fff;
+            text-decoration: none;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
+        }
+
+        .header-buttons button:hover, .header-buttons a:hover {
+            background-color: #0056b3;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            height: 100%;
+        }
+
+        .map-container {
+            flex: 3;
+            position: relative;
+            height: 100%;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        .info-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+            gap: 20px;
+        }
+
+        .card {
+            background-color: #f9f9fb;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            background-color: #4c4eff;
+            color: white;
+            border-radius: 10px 10px 0 0;
+            padding: 10px 15px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .card-body {
+            padding: 15px;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .description-box {
+            background-color: #eef5ff;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            font-size: 14px;
+            color: #333;
+        }
+
+        .description-box b {
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .ai-box {
+            background-color: #ffe8e8;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            font-size: 14px;
+            color: #333;
+            margin-top: 10px;
+            max-height: 150px; /* Set a maximum height */
+            overflow-y: auto; /* Enable vertical scrolling */
+        }
+
+        .ai-box b {
+            font-weight: bold;
+            color: #d9534f;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🌊 Ocean Current Data and Map</h1>
+        <div class="header-buttons">
+            <button onclick="logout()">Logout</button>
+            <a href="/animation">View Animation</a>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+        <div class="info-container">
+            <div class="card">
+                <div class="card-header">
+                    Hourly Data
+                </div>
+                <div class="card-body" id="hourlyData">
+                    Click on the map to add a marker and view ocean current data...
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    Current Data
+                </div>
+                <div class="card-body" id="currentData">
+                    Loading current data...
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    Historical Data (Last 5 Days)
+                </div>
+                <div class="card-body">
+                    <canvas id="historicalDataChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="description-box" id="current-description">
+                Loading description...
+            </div>
+
+            <!-- AI Response Box -->
+            <div class="ai-box" id="ai-message">
+                Loading AI message...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Logout function
+        function logout() {
+            window.location.href = '/logout';
+        }
+
+        // Initialize the map
+        var map = L.map('map', {
+            fullscreenControl: {
+                pseudoFullscreen: false
+            }
+        }).setView([8.570728, 124.649460], 5);
+
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: ''
+        }).addTo(map);
+
+        const oceanCurrentIcon = L.icon({
+            iconUrl: 'https://cdn-icons-png.flaticon.com/512/2831/2831721.png',
+            iconSize: [30, 30],
+        });
+
+        let historicalChart; // Global variable to manage the chart instance
+
+        function fetchOceanData(lat, lon) {
+            fetch(`/fetch_ocean_data?latitude=${lat}&longitude=${lon}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Ocean Data Response:", data);
+
+                    const current = data.current || {};
+                    const hourly = data.hourly || {};
+                    const description = data.description || "No description available.";
+
+                    // Update Hourly Data Section
+                    document.getElementById('hourlyData').innerText = `
+                        Location: Latitude ${lat.toFixed(4)}, Longitude ${lon.toFixed(4)}
+                        Hourly Velocity: ${hourly?.ocean_current_velocity?.[0] || 'N/A'} m/s
+                        Hourly Direction: ${hourly?.ocean_current_direction?.[0] || 'N/A'}°
+                    `;
+
+                    // Update Current Data Section
+                    document.getElementById('currentData').innerText = `
+                        Current Velocity: ${current?.velocity || 'N/A'} m/s
+                        Current Direction: ${current?.direction || 'N/A'}°
+                    `;
+
+                    // Update Description
+                    document.getElementById('current-description').innerText = description;
+
+                    // Fetch AI message
+                    fetchAIMessage(current.velocity, current.direction, description);
+
+                    // Add Marker and Popup
+                    const popupContent = `
+                        <b>Location:</b> Latitude ${lat.toFixed(4)}, Longitude ${lon.toFixed(4)}<br>
+                        <b>Current Velocity:</b> ${current?.velocity || 'N/A'} m/s<br>
+                        <b>Current Direction:</b> ${current?.direction || 'N/A'}°<br>
+                        <b>Description:</b> ${description}
+                    `;
+
+                    const marker = L.marker([lat, lon], { icon: oceanCurrentIcon }).addTo(map);
+                    marker.bindPopup(popupContent).openPopup();
+                })
+                .catch(error => {
+                    console.error("Error fetching ocean data:", error);
+                    document.getElementById('hourlyData').innerText = "Error fetching hourly data.";
+                    document.getElementById('currentData').innerText = "Error fetching current data.";
+                    document.getElementById('current-description').innerText = "Error fetching description.";
+                    document.getElementById('ai-message').innerText = "Error fetching AI message.";
+                });
+        }
+
+        function fetchAIMessage(velocity, direction, description) {
+            const prompt = `The current ocean velocity is ${velocity} m/s, and the direction is ${direction} degrees. ${description}`;
+            fetch(`/fetch_ai_message?prompt=${encodeURIComponent(prompt)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        document.getElementById('ai-message').innerText = "Error: " + data.error;
+                    } else {
+                        document.getElementById('ai-message').innerText = data.message || "No AI message available.";
+                    }
+                })
+                .catch(error => {
+                    console.error("Error fetching AI message:", error);
+                    document.getElementById('ai-message').innerText = "Error fetching AI message.";
+                });
+        }
+
+
+        function fetchHistoricalData(lat, lon) {
+            fetch(`/fetch_historical_data?latitude=${lat}&longitude=${lon}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error(data.error);
+                        return;
+                    }
+
+                    const timeSeries = data.time || [];
+                    const velocitySeries = data.velocity || [];
+
+                    if (timeSeries.length === 0 || velocitySeries.length === 0) {
+                        console.error("No historical data available.");
+                        return;
+                    }
+
+                    // Clear existing chart instance if it exists
+                    if (historicalChart) {
+                        historicalChart.destroy();
+                    }
+
+                    // Create new chart
+                    const ctx = document.getElementById('historicalDataChart').getContext('2d');
+                    historicalChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: timeSeries.map(ts => new Date(ts).toLocaleString()),
+                            datasets: [{
+                                label: 'Ocean Current Velocity (m/s)',
+                                data: velocitySeries,
+                                borderColor: 'blue',
+                                fill: false,
+                                tension: 0.1,
+                                pointBackgroundColor: 'blue',
+                                pointHoverRadius: 5,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                tooltip: {
+                                    callbacks: {
+                                        label: function (tooltipItem) {
+                                            return `Velocity: ${tooltipItem.raw.toFixed(2)} m/s`;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Timestamp'
+                                    },
+                                    ticks: {
+                                        maxRotation: 90,
+                                        minRotation: 45
+                                    }
+                                },
+                                y: {
+                                    title: {
+                                        display: true,
+                                        text: 'Velocity (m/s)'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                })
+                .catch(error => console.error('Error fetching historical data:', error));
+        }
+
+        // Map click event to update both ocean and historical data
+        map.on('click', function (e) {
+            const lat = e.latlng.lat;
+            const lon = e.latlng.lng;
+
+            fetchOceanData(lat, lon);
+            fetchHistoricalData(lat, lon);
+        });
+    </script>
+</body>
+</html>

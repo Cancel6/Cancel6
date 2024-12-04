@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ocean Animation</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        iframe {
+            border: none;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform: scale(1.2); /* Zoom the iframe by 20% */
+            transform-origin: center; /* Keep the zoom centered */
+        }
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .back-button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <!-- Back to Map Button -->
+    <button class="back-button" onclick="window.location.href='{{ url_for('map_page') }}'">Back to Map</button>
+    
+    <!-- Iframe for Ocean Animation -->
+    <iframe src="https://earth.nullschool.net/#current/wind/surface/currents/overlay=wind/orthographic=-237.36,11.74,2425" title="Ocean Animation"></iframe>
+</body>
+</html>

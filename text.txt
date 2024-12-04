@@ -1,0 +1,3 @@
+CD C:\Users\Les\Desktop\project\
+
+python app.py
