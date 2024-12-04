@@ -12,9 +12,13 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# Configure the database connection
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://root:new_password@localhost/ocean_current_app'
+# Configure the PostgreSQL database connection
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://les_posgre_user:yKsymd7njZ2BvriGdO6s03tiZOuCSse7@dpg-ct7qpj68ii6s73c8bbjg-a/les_posgre'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# # Configure the database connection
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://root:new_password@localhost/ocean_current_app'
+# app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Secret key for session management
 app.secret_key = 'lester'
@@ -74,7 +78,6 @@ def determine_direction(velocity, direction, directions):
                 f"which is towards the {direction_label}. This indicates a flow heading primarily {direction_label.lower()}ward.")
     else:
         return "Invalid direction input. Direction must be between 0 and 360 degrees."
-
 
 google = oauth.register(
     name='google',
@@ -328,5 +331,9 @@ def animation_page():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
-
+    import os
+    if os.getenv('FLASK_ENV') == 'development':
+        app.run(debug=True)  # Flask development server
+    else:
+        from waitress import serve
+        serve(app, host='0.0.0.0', port=5000)  # Waitress for production or local testing
