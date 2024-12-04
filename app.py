@@ -13,8 +13,9 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# app.config['SESSION_TYPE'] = 'filesystem'
+
 # # Configure the PostgreSQL database connection
+# app.config['SESSION_TYPE'] = 'filesystem'
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://les_posgres_user:gYpuFme1C2tPvrpXWusQCvegnOCGIaYv@dpg-ct7r5a23esus73a1762g-a/les_posgres'
 # app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -22,10 +23,10 @@ app = Flask(__name__)
 # # Configure the database connection
 
 
-# #LOCAL
-# app.config['SESSION_TYPE'] = 'filesystem'
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://root:new_password@localhost/ocean_current_app'
-# app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+#LOCAL
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://root:new_password@localhost/ocean_current_app'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Secret key for session management
 app.secret_key = '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'
@@ -355,5 +356,14 @@ def animation_page():
         return redirect(url_for('login'))
     return render_template('animation.html')
 
+# if __name__ == '__main__':
+#     app.run(debug=True)
+
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    import os
+    if os.getenv('FLASK_ENV') == 'development':
+        app.run(debug=True)  # Flask development server
+    else:
+        from waitress import serve
+        serve(app, host='0.0.0.0', port=5000)  # Waitress for production or local testing
