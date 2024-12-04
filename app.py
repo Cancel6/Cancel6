@@ -13,7 +13,7 @@ load_dotenv()
 app = Flask(__name__)
 
 # Configure the PostgreSQL database connection
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://les_posgre_user:yKsymd7njZ2BvriGdO6s03tiZOuCSse7@dpg-ct7qpj68ii6s73c8bbjg-a/les_posgre'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://les_posgres_user:gYpuFme1C2tPvrpXWusQCvegnOCGIaYv@dpg-ct7r5a23esus73a1762g-a/les_posgres'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # # Configure the database connection
