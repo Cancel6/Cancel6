@@ -6,22 +6,29 @@ from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
 import os
 from g4f.client import Client  
+import secrets
 
 # Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__)
 
-# Configure the PostgreSQL database connection
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://les_posgres_user:gYpuFme1C2tPvrpXWusQCvegnOCGIaYv@dpg-ct7r5a23esus73a1762g-a/les_posgres'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# app.config['SESSION_TYPE'] = 'filesystem'
+# # Configure the PostgreSQL database connection
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://les_posgres_user:gYpuFme1C2tPvrpXWusQCvegnOCGIaYv@dpg-ct7r5a23esus73a1762g-a/les_posgres'
+# app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+#postgresql://les_posgres_user:gYpuFme1C2tPvrpXWusQCvegnOCGIaYv@dpg-ct7r5a23esus73a1762g-a.singapore-postgres.render.com/les_posgres
 # # Configure the database connection
+
+
+# #LOCAL
+# app.config['SESSION_TYPE'] = 'filesystem'
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://root:new_password@localhost/ocean_current_app'
 # app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Secret key for session management
-app.secret_key = 'lester'
+app.secret_key = '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'
 
 # Initialize the database
 db = SQLAlchemy(app)
@@ -83,20 +90,22 @@ google = oauth.register(
     name='google',
     client_id=os.getenv('GOOGLE_CLIENT_ID'),
     client_secret=os.getenv('GOOGLE_CLIENT_SECRET'),
-    access_token_url='https://accounts.google.com/o/oauth2/token',
+    access_token_url='https://oauth2.googleapis.com/token',
     authorize_url='https://accounts.google.com/o/oauth2/auth',
     authorize_params=None,
     redirect_uri='http://localhost:5000/google/callback',
-    client_kwargs={'scope': 'openid profile'},
+    client_kwargs={'scope': 'openid profile email'},
     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration'
 )
+
 
 # User model
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True, nullable=False)
-    password = db.Column(db.String(255), nullable=True)  # Not required for Google login
+    password = db.Column(db.String(255), nullable=True)  # Make password nullable for Google users
     google_id = db.Column(db.String(255), unique=True, nullable=True)
+
 
 # Create the database tables (if they don't already exist)
 with app.app_context():
@@ -105,31 +114,48 @@ with app.app_context():
 # Google Login Route
 @app.route('/login/google')
 def google_login():
-    redirect_uri = url_for('google_callback', _external=True)
-    return google.authorize_redirect(redirect_uri)
+    # Generate a random nonce and store it in session
+    nonce = secrets.token_urlsafe(16)
+    session['nonce'] = nonce
 
-# Google OAuth callback
+    redirect_uri = url_for('google_callback', _external=True)
+    return google.authorize_redirect(redirect_uri, nonce=nonce)
+
 @app.route('/login/callback')
 def google_callback():
     token = google.authorize_access_token()
-    resp = google.get('userinfo')
-    user_info = resp.json()
 
-    # Check if user already exists
-    user = User.query.filter_by(google_id=user_info['id']).first()
+    # Retrieve the nonce value from the session
+    nonce = session.pop('nonce', None)
+    if not nonce:
+        return "Nonce value is missing, please try again."
+
+    # Validate the ID token with the nonce
+    claims_options = {
+        "iss": {"values": ["https://accounts.google.com", "accounts.google.com"]}
+    }
+    user_info = google.parse_id_token(token, nonce=nonce, claims_options=claims_options)
+
+    # Debugging output
+    print(f"Token: {token}")
+    print(f"User Info: {user_info}")
+
+    # Proceed to check or register the user in your database
+    user = User.query.filter_by(google_id=user_info['sub']).first()
     if user:
         # If user exists, log them in
         session['user_id'] = user.id
         session['username'] = user.username
     else:
         # If user does not exist, register them
-        new_user = User(username=user_info['email'], google_id=user_info['id'])
+        new_user = User(username=user_info['email'], google_id=user_info['sub'])
         db.session.add(new_user)
         db.session.commit()
         session['user_id'] = new_user.id
         session['username'] = new_user.username
 
     return redirect(url_for('home_page'))
+
 
 # Route for the home page (Map page)
 @app.route('/')
@@ -329,11 +355,5 @@ def animation_page():
         return redirect(url_for('login'))
     return render_template('animation.html')
 
-
 if __name__ == '__main__':
-    import os
-    if os.getenv('FLASK_ENV') == 'development':
-        app.run(debug=True)  # Flask development server
-    else:
-        from waitress import serve
-        serve(app, host='0.0.0.0', port=5000)  # Waitress for production or local testing
+    app.run(debug=True)
